@@ -43,67 +43,13 @@ function iniciarEstrutura() {
   });
   if (nomes.length) desenharBloco(nomes[0]);
 }
-function escaparHTML(valor) {
-  return String(valor ?? "").replace(/[&<>"']/g, (c) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-  })[c]);
-}
-function renderizarCorrecao(dados) {
-  const competencias = Array.isArray(dados.competencias) ? dados.competencias : [];
-  const nomes = [
-    "C1 — Domínio da escrita formal", "C2 — Compreensão do tema",
-    "C3 — Seleção e organização de argumentos", "C4 — Coesão e mecanismos linguísticos",
-    "C5 — Proposta de intervenção"
-  ];
-  const linhas = nomes.map((nome, i) => {
-    const item = competencias[i] || {};
-    const nota = Number(item.nota) || 0;
-    return '<div class="seg"><b>' + nome + '</b><p><strong>' + nota +
-      '/200 pontos</strong></p><p>' + escaparHTML(item.justificativa) +
-      '</p><p class="mut"><b>Como melhorar:</b> ' + escaparHTML(item.melhoria) + '</p></div>';
-  }).join("");
-  const total = competencias.reduce((s, c) => s + (Number(c.nota) || 0), 0);
-  $("res").innerHTML = '<div class="card"><h2>Resultado da correção</h2><p class="big">' + total +
-    '<span class="mut"> / 1000 pontos</span></p><p class="mut">Estimativa pedagógica gerada por IA; a nota oficial pode ser diferente.</p>' +
-    '<h3>Avaliação por competência</h3>' + linhas + '<h3>Pontos fortes</h3><ul>' +
-    (dados.pontos_fortes || []).map(x => '<li>' + escaparHTML(x) + '</li>').join("") +
-    '</ul><h3>Prioridades para melhorar</h3><ul>' +
-    (dados.prioridades || []).map(x => '<li>' + escaparHTML(x) + '</li>').join("") +
-    '</ul><h3>Comentário geral</h3><p>' + escaparHTML(dados.comentario_geral) +
-    '</p><h3>Proposta de intervenção</h3><p>' + escaparHTML(dados.intervencao) + '</p></div>';
-}
 function iniciarEscrita() {
-  $("txt").oninput = () => {
-    const palavras = $("txt").value.trim().split(/\s+/).filter(Boolean).length;
-    $("cnt").textContent = palavras + " palavras";
-  };
-  $("corr").onclick = async () => {
-    const texto = $("txt").value.trim();
-    const tema = $("tema").value.trim();
-    if (texto.length < 100) {
-      $("res").innerHTML = '<div class="warn">Escreva pelo menos 100 caracteres antes de solicitar a correção.</div>';
-      return;
-    }
-    const botao = $("corr");
-    botao.disabled = true;
-    botao.textContent = "⏳ Analisando redação...";
-    $("res").innerHTML = '<p class="mut">A IA está avaliando as cinco competências. Isso pode levar alguns segundos.</p>';
-    try {
-      const resposta = await fetch("/api/corrigir", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tema, redacao: texto })
-      });
-      const dados = await resposta.json().catch(() => ({}));
-      if (!resposta.ok) throw new Error(dados.error || "Não foi possível corrigir agora.");
-      renderizarCorrecao(dados);
-    } catch (erro) {
-      $("res").innerHTML = '<div class="warn">' + escaparHTML(erro.message) +
-        '. Confira se OPENAI_API_KEY foi cadastrada no Vercel e tente novamente.</div>';
-    } finally {
-      botao.disabled = false;
-      botao.textContent = "🤖 Corrigir com IA";
-    }
+  const campo = $("txt");
+  const contador = $("cnt");
+  if (!campo || !contador) return;
+  campo.oninput = () => {
+    const palavras = campo.value.trim().split(/\s+/).filter(Boolean).length;
+    contador.textContent = palavras + " palavras";
   };
 }
 function iniciarRedacao() {

@@ -10,27 +10,18 @@ export default async function handler(req, res) {
   if (!process.env.OPENAI_API_KEY) {
     return res.status(503).json({ error: "Falta cadastrar OPENAI_API_KEY nas variáveis de ambiente do Vercel." });
   }
-
   const tema = typeof req.body?.tema === "string" ? req.body.tema.trim().slice(0, 500) : "";
   const redacao = typeof req.body?.redacao === "string" ? req.body.redacao.trim() : "";
   if (redacao.length < 100) return res.status(400).json({ error: "Envie uma redação com pelo menos 100 caracteres." });
   if (redacao.length > 12000) return res.status(413).json({ error: "A redação ultrapassa o limite de 12.000 caracteres." });
 
-  const instrucao = \`Você é um avaliador pedagógico especializado na redação do ENEM brasileiro. Avalie com rigor e respeito segundo as cinco competências oficiais. Justifique cada nota com evidências do texto. As notas por competência devem ser escolhidas exclusivamente entre 0, 40, 80, 120, 160 e 200, somando de 0 a 1000. Considere fuga ao tema, tipo textual e extensão insuficiente quando aplicáveis. Não apresente a avaliação como nota oficial. Na competência 5 verifique agente, ação, meio/modo, efeito/finalidade e detalhamento, respeitando os direitos humanos. Responda SOMENTE em JSON válido no formato:
-{
- "competencias":[
-  {"nota":0,"justificativa":"...","melhoria":"..."},
-  {"nota":0,"justificativa":"...","melhoria":"..."},
-  {"nota":0,"justificativa":"...","melhoria":"..."},
-  {"nota":0,"justificativa":"...","melhoria":"..."},
-  {"nota":0,"justificativa":"...","melhoria":"..."}
- ],
- "pontos_fortes":["..."],
- "prioridades":["..."],
- "comentario_geral":"...",
- "intervencao":"..."
-}
-Use português brasileiro claro.\`;
+  const instrucao = [
+    "Você é um avaliador pedagógico especializado na redação do ENEM brasileiro. Avalie com rigor e respeito segundo as cinco competências oficiais.",
+    "Justifique cada nota com evidências do texto. As notas por competência devem ser escolhidas exclusivamente entre 0, 40, 80, 120, 160 e 200, somando de 0 a 1000.",
+    "Considere fuga ao tema, tipo textual e extensão insuficiente quando aplicáveis. Não apresente a avaliação como nota oficial.",
+    "Na competência 5 verifique agente, ação, meio/modo, efeito/finalidade e detalhamento, respeitando os direitos humanos.",
+    "Responda SOMENTE em JSON válido neste formato: {\"competencias\":[{\"nota\":0,\"justificativa\":\"...\",\"melhoria\":\"...\"},{\"nota\":0,\"justificativa\":\"...\",\"melhoria\":\"...\"},{\"nota\":0,\"justificativa\":\"...\",\"melhoria\":\"...\"},{\"nota\":0,\"justificativa\":\"...\",\"melhoria\":\"...\"},{\"nota\":0,\"justificativa\":\"...\",\"melhoria\":\"...\"}],\"pontos_fortes\":[\"...\"],\"prioridades\":[\"...\"],\"comentario_geral\":\"...\",\"intervencao\":\"...\"}. Use português brasileiro claro."
+  ].join(" ");
 
   try {
     const resposta = await fetch("https://api.openai.com/v1/responses", {
@@ -59,8 +50,7 @@ Use português brasileiro claro.\`;
       .map(item => item.text)
       .join("\n").trim();
     if (!saida) return res.status(502).json({ error: "A IA não retornou uma avaliação válida. Tente novamente." });
-    const jsonLimpo = saida.replace(/^\\\`\\\`\\\`json\\s*/i, "").replace(/\\s*\\\`\\\`\\\`$/, "");
-    const avaliacao = JSON.parse(jsonLimpo);
+    const avaliacao = JSON.parse(saida);
     if (!Array.isArray(avaliacao.competencias) || avaliacao.competencias.length !== 5) {
       return res.status(502).json({ error: "A resposta da IA veio em formato inesperado. Tente novamente." });
     }
